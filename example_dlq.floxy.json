@@ -1,0 +1,63 @@
+{
+  "start": "step-ok",
+  "steps": {
+    "step-ok": {
+      "name": "step-ok",
+      "next": ["step-maybe-fail"],
+      "prev": "_root_",
+      "type": "task",
+      "delay": 0,
+      "handler": "simple-ok",
+      "timeout": 0,
+      "metadata": {},
+      "parallel": null,
+      "wait_for": null,
+      "condition": "",
+      "on_failure": "",
+      "max_retries": 1,
+      "retry_delay": 0,
+      "join_strategy": "",
+      "no_idempotent": false,
+      "retry_strategy": 0
+    },
+    "step-maybe-fail": {
+      "name": "step-maybe-fail",
+      "next": ["step-after-recovery"],
+      "prev": "step-ok",
+      "type": "task",
+      "delay": 0,
+      "handler": "maybe-fail",
+      "timeout": 0,
+      "metadata": {},
+      "parallel": null,
+      "wait_for": null,
+      "condition": "",
+      "on_failure": "",
+      "max_retries": 1,
+      "retry_delay": 0,
+      "join_strategy": "",
+      "no_idempotent": false,
+      "retry_strategy": 0
+    },
+    "step-after-recovery": {
+      "name": "step-after-recovery",
+      "next": [],
+      "prev": "step-maybe-fail",
+      "type": "task",
+      "delay": 0,
+      "handler": "simple-ok",
+      "timeout": 0,
+      "metadata": {},
+      "parallel": null,
+      "wait_for": null,
+      "condition": "",
+      "on_failure": "",
+      "max_retries": 1,
+      "retry_delay": 0,
+      "join_strategy": "",
+      "no_idempotent": false,
+      "retry_strategy": 0
+    }
+  },
+  "dlq_enabled": true
+}

@@ -71,33 +71,38 @@ export class FloxyPanel {
   }
 
   private nodeLabel(stepName: string, step: any): string {
-    const label = step.Label || stepName;
-    switch (step.Type) {
+    const label = step.Label || step.label || stepName;
+    const stepType = step.Type || step.type || '';
+    
+    switch (stepType.toLowerCase()) {
       case 'condition':
-      case 'Condition':
-      case 'StepTypeCondition':
         return `${this.normalizeId(stepName)}{${label}}`;
       case 'join':
-      case 'Join':
         return `${this.normalizeId(stepName)}((${label}))`;
+      case 'save_point':
       case 'savepoint':
-      case 'SavePoint':
         return `${this.normalizeId(stepName)}[( ${label} )]`;
       case 'human':
-      case 'Human':
         return `${this.normalizeId(stepName)}[/ ${label} /]`;
+      case 'fork':
+        return `${this.normalizeId(stepName)}[${label}]`;
+      case 'parallel':
+        return `${this.normalizeId(stepName)}[${label}]`;
+      case 'task':
       default:
         return `${this.normalizeId(stepName)}[${label}]`;
     }
   }
 
-  private edge(a: string, b: string, opts?: { label?: string, style?: 'dashed'|'double' }) {
+  private edge(a: string, b: string, opts?: { label?: string, style?: 'dashed'|'double'|'dotted' }) {
     const la = this.normalizeId(a);
     const lb = this.normalizeId(b);
     if (opts?.style === 'dashed') {
       return `${la} -.->|${opts.label || ''}| ${lb}\n`;
     } else if (opts?.style === 'double') {
       return `${la} ==> ${lb}\n`;
+    } else if (opts?.style === 'dotted') {
+      return `${la} -.- ${lb}\n`;
     } else {
       return `${la} -->${opts?.label ? '|' + opts.label + '|' : ''} ${lb}\n`;
     }
@@ -106,46 +111,89 @@ export class FloxyPanel {
   private convertJsonToMermaid(jsonStr: string): string {
     try {
       const def = JSON.parse(jsonStr);
-      const steps = def.Definition?.Steps || {};
+      
+      // Поддержка как старого формата (Definition.Steps), так и нового (steps)
+      let steps: any = {};
+      let startStep = '';
+      
+      if (def.Definition?.Steps) {
+        // Старый формат
+        steps = def.Definition.Steps;
+        startStep = def.Definition.Start || '';
+      } else if (def.steps) {
+        // Новый формат
+        steps = def.steps;
+        startStep = def.start || '';
+      } else {
+        return `flowchart TD\nerror([Invalid JSON format])`;
+      }
+
       let nodes = '';
       let links = '';
 
+      // Добавляем стартовый узел если есть
+      if (startStep && steps[startStep]) {
+        nodes += `${this.normalizeId('_start_')}((Start))\n`;
+        links += this.edge('_start_', startStep);
+      }
+
+      // Создаем узлы
       for (const [name, step] of Object.entries<any>(steps)) {
         nodes += this.nodeLabel(name, step) + '\n';
       }
 
+      // Создаем связи
       for (const [name, step] of Object.entries<any>(steps)) {
-        if (step.Type === 'condition' || step.Type === 'Condition' || step.Type === 'StepTypeCondition') {
-          if (step.Next) {
-            links += this.edge(name, step.Next, { label: 'yes' });
+        // Обработка условий
+        if (step.type === 'condition' || step.Type === 'condition' || step.Type === 'Condition' || step.Type === 'StepTypeCondition') {
+          if (step.next && step.next.length > 0) {
+            links += this.edge(name, step.next[0], { label: 'yes' });
           }
-          if (step.Else) {
-            links += this.edge(name, step.Else, { label: 'no' });
+          if (step.else || step.Else) {
+            links += this.edge(name, step.else || step.Else, { label: 'no' });
           }
-        } else if (step.Next) {
-          if (Array.isArray(step.Next)) {
-            for (const n of step.Next) {
-              links += this.edge(name, n);
+        } 
+        // Обработка обычных шагов
+        else if (step.next || step.Next) {
+          const nextSteps = step.next || step.Next;
+          if (Array.isArray(nextSteps)) {
+            for (const n of nextSteps) {
+              if (n) links += this.edge(name, n);
             }
-          } else {
-            links += this.edge(name, step.Next);
+          } else if (nextSteps) {
+            links += this.edge(name, nextSteps);
           }
         }
 
-        if (step.OnFailure) {
-          links += this.edge(name, step.OnFailure, { style: 'dashed', label: 'on failure' });
+        // Обработка компенсации (OnFailure)
+        if (step.on_failure || step.OnFailure) {
+          links += this.edge(name, step.on_failure || step.OnFailure, { style: 'dashed', label: 'on failure' });
         }
 
-        if (step.Parallel && Array.isArray(step.Parallel)) {
-          for (const p of step.Parallel) {
-            links += this.edge(name, p, { style: 'double' });
+        // Обработка параллельных шагов
+        if (step.parallel || step.Parallel) {
+          const parallelSteps = step.parallel || step.Parallel;
+          if (Array.isArray(parallelSteps)) {
+            for (const p of parallelSteps) {
+              if (p) links += this.edge(name, p, { style: 'double' });
+            }
+          }
+        }
+
+        // Обработка join шагов (WaitFor)
+        if (step.wait_for || step.WaitFor) {
+          const waitForSteps = step.wait_for || step.WaitFor;
+          if (Array.isArray(waitForSteps)) {
+            for (const w of waitForSteps) {
+              if (w) links += this.edge(w, name, { style: 'dotted' });
+            }
           }
         }
       }
 
       return `flowchart TD\n${nodes}\n${links}`;
     } catch (err) {
-      return `flowchart TD\nerror([Invalid JSON])`;
+      return `flowchart TD\nerror([Invalid JSON: ${err}])`;
     }
   }
 
