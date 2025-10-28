@@ -1,0 +1,58 @@
+{
+  "ID": "order-processing-v1",
+  "Name": "order-processing",
+  "Version": 1,
+  "Definition": {
+    "Start": "validate_order",
+    "Steps": {
+      "validate_order": {
+        "Type": "Task",
+        "Handler": "ValidateOrderHandler",
+        "Next": "check_stock"
+      },
+      "check_stock": {
+        "Type": "Condition",
+        "Handler": "CheckStockHandler",
+        "Next": "process_payment",
+        "Else": "notify_out_of_stock"
+      },
+      "process_payment": {
+        "Type": "Task",
+        "Handler": "ProcessPaymentHandler",
+        "Next": "shipment_parallel",
+        "OnFailure": "refund_payment"
+      },
+      "refund_payment": {
+        "Type": "Task",
+        "Handler": "RefundPaymentHandler"
+      },
+      "notify_out_of_stock": {
+        "Type": "Task",
+        "Handler": "NotifyUserHandler",
+        "Next": "done"
+      },
+      "shipment_parallel": {
+        "Type": "Parallel",
+        "Parallel": ["prepare_label", "schedule_courier"],
+        "Next": "join_shipping"
+      },
+      "prepare_label": {
+        "Type": "Task",
+        "Handler": "LabelServiceHandler"
+      },
+      "schedule_courier": {
+        "Type": "Task",
+        "Handler": "CourierServiceHandler"
+      },
+      "join_shipping": {
+        "Type": "Join",
+        "WaitFor": ["prepare_label", "schedule_courier"],
+        "Next": "done"
+      },
+      "done": {
+        "Type": "SavePoint",
+        "Handler": ""
+      }
+    }
+  }
+}

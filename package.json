@@ -1,0 +1,38 @@
+{
+  "name": "floxy-vscode",
+  "displayName": "Floxy Flow Viewer",
+  "description": "Visualize Floxy workflow definitions as flowcharts directly in VS Code.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Visualization"],
+  "activationEvents": [
+    "onCommand:floxy.showFlow",
+    "onCommand:floxy.showFlowFromFile"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "floxy.showFlow",
+        "title": "Floxy: Show Example Flow Diagram"
+      },
+      {
+        "command": "floxy.showFlowFromFile",
+        "title": "Floxy: Show Flow From JSON File"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.3.0",
+    "vsce": "^2.15.0"
+  }
+}
