@@ -4,4 +4,4 @@ install-tools:
 
 .PHONY: install
 install:
-	code --install-extension floxy-vscode-0.0.1.vsix
+	code --install-extension floxy-vscode-0.1.0.vsix

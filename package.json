@@ -2,7 +2,7 @@
   "name": "floxy-vscode",
   "displayName": "Floxy Flow Viewer",
   "description": "Visualize Floxy workflow definitions as flowcharts directly in VS Code.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.90.0"
   },
