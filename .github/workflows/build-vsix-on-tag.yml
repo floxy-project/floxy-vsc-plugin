@@ -1,5 +1,10 @@
 name: Build VS Code Package
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 on:
   push:
     tags:
