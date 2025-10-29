@@ -49,8 +49,8 @@ export class FloxyPanel {
         <html lang="en">
         <head>
             <meta charset="UTF-8">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data: ${this.panel.webview.cspSource}; script-src https: ${this.panel.webview.cspSource} 'unsafe-inline'; style-src ${this.panel.webview.cspSource} 'unsafe-inline'; font-src ${this.panel.webview.cspSource};">
             <title>Floxy Flow</title>
-            <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"></script>
             <style>
                 body { background: #1e1e1e; color: #ddd; padding: 0; margin: 0; }
                 .mermaid { text-align: center; }
@@ -98,10 +98,15 @@ export class FloxyPanel {
     const la = this.normalizeId(a);
     const lb = this.normalizeId(b);
     if (opts?.style === 'dashed') {
-      return `${la} -.->|${opts.label || ''}| ${lb}\n`;
+      // Mermaid dashed link with optional text: A -. text .-> B
+      return opts.label
+        ? `${la} -. ${opts.label} .-> ${lb}\n`
+        : `${la} -.-> ${lb}\n`;
     } else if (opts?.style === 'double') {
-      return `${la} ==> ${lb}\n`;
+      // Thick link
+      return `${la} ==>${opts?.label ? '|' + opts.label + '|' : ''} ${lb}\n`;
     } else if (opts?.style === 'dotted') {
+      // Mermaid dotted link (labels not officially supported like dashed)
       return `${la} -.- ${lb}\n`;
     } else {
       return `${la} -->${opts?.label ? '|' + opts.label + '|' : ''} ${lb}\n`;
@@ -135,17 +140,19 @@ export class FloxyPanel {
       }
 
       for (const [name, step] of Object.entries<any>(steps)) {
-        if (step.type === 'condition' || step.Type === 'Condition') {
-          if (step.next && step.next.length > 0) {
-            links += this.edge(name, step.next[0], { label: 'yes' });
-          }
-          if (step.else || step.Else) {
-            links += this.edge(name, step.else || step.Else, { label: 'no' });
-          }
-        } 
+        const type = ((step.type ?? step.Type) ?? '').toString().toLowerCase();
 
-        else if (step.next || step.Next) {
-          const nextSteps = step.next || step.Next;
+        if (type === 'condition') {
+          const nextArr = (Array.isArray(step.next ?? step.Next) ? (step.next ?? step.Next) : []) as string[];
+          if (nextArr.length > 0) {
+            links += this.edge(name, nextArr[0], { label: 'yes' });
+          }
+          const elseTarget = (step.else ?? step.Else) as string | undefined;
+          if (elseTarget) {
+            links += this.edge(name, elseTarget, { label: 'no' });
+          }
+        } else {
+          const nextSteps = (step.next ?? step.Next) as string | string[] | undefined | null;
           if (Array.isArray(nextSteps)) {
             for (const n of nextSteps) {
               if (n) links += this.edge(name, n);
@@ -155,25 +162,24 @@ export class FloxyPanel {
           }
         }
 
-        if (step.on_failure || step.OnFailure) {
-          links += this.edge(name, step.on_failure || step.OnFailure, { style: 'dashed', label: 'on failure' });
+        const onFailure = (step.on_failure ?? step.OnFailure) as string | undefined;
+        if (onFailure) {
+          links += this.edge(name, onFailure, { style: 'dashed', label: 'on failure' });
         }
 
-        if (step.parallel || step.Parallel) {
-          const parallelSteps = step.parallel || step.Parallel;
-          if (Array.isArray(parallelSteps)) {
-            for (const p of parallelSteps) {
-              if (p) links += this.edge(name, p, { style: 'double' });
-            }
+        const parallelSteps = (step.parallel ?? step.Parallel) as string[] | string | undefined | null;
+        if (parallelSteps) {
+          const arr = Array.isArray(parallelSteps) ? parallelSteps : [parallelSteps];
+          for (const p of arr) {
+            if (p) links += this.edge(name, p, { style: 'double' });
           }
         }
 
-        if (step.wait_for || step.WaitFor) {
-          const waitForSteps = step.wait_for || step.WaitFor;
-          if (Array.isArray(waitForSteps)) {
-            for (const w of waitForSteps) {
-              if (w) links += this.edge(w, name, { style: 'dotted' });
-            }
+        const waitForSteps = (step.wait_for ?? step.WaitFor) as string[] | string | undefined | null;
+        if (waitForSteps) {
+          const arr = Array.isArray(waitForSteps) ? waitForSteps : [waitForSteps];
+          for (const w of arr) {
+            if (w) links += this.edge(w, name, { style: 'dotted' });
           }
         }
       }
