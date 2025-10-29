@@ -112,16 +112,10 @@ export class FloxyPanel {
     try {
       const def = JSON.parse(jsonStr);
       
-      // Поддержка как старого формата (Definition.Steps), так и нового (steps)
       let steps: any = {};
       let startStep = '';
       
-      if (def.Definition?.Steps) {
-        // Старый формат
-        steps = def.Definition.Steps;
-        startStep = def.Definition.Start || '';
-      } else if (def.steps) {
-        // Новый формат
+      if (def.steps) {
         steps = def.steps;
         startStep = def.start || '';
       } else {
@@ -131,21 +125,17 @@ export class FloxyPanel {
       let nodes = '';
       let links = '';
 
-      // Добавляем стартовый узел если есть
       if (startStep && steps[startStep]) {
         nodes += `${this.normalizeId('_start_')}((Start))\n`;
         links += this.edge('_start_', startStep);
       }
-
-      // Создаем узлы
+      
       for (const [name, step] of Object.entries<any>(steps)) {
         nodes += this.nodeLabel(name, step) + '\n';
       }
 
-      // Создаем связи
       for (const [name, step] of Object.entries<any>(steps)) {
-        // Обработка условий
-        if (step.type === 'condition' || step.Type === 'condition' || step.Type === 'Condition' || step.Type === 'StepTypeCondition') {
+        if (step.type === 'condition' || step.Type === 'Condition') {
           if (step.next && step.next.length > 0) {
             links += this.edge(name, step.next[0], { label: 'yes' });
           }
@@ -153,7 +143,7 @@ export class FloxyPanel {
             links += this.edge(name, step.else || step.Else, { label: 'no' });
           }
         } 
-        // Обработка обычных шагов
+
         else if (step.next || step.Next) {
           const nextSteps = step.next || step.Next;
           if (Array.isArray(nextSteps)) {
@@ -165,12 +155,10 @@ export class FloxyPanel {
           }
         }
 
-        // Обработка компенсации (OnFailure)
         if (step.on_failure || step.OnFailure) {
           links += this.edge(name, step.on_failure || step.OnFailure, { style: 'dashed', label: 'on failure' });
         }
 
-        // Обработка параллельных шагов
         if (step.parallel || step.Parallel) {
           const parallelSteps = step.parallel || step.Parallel;
           if (Array.isArray(parallelSteps)) {
@@ -180,7 +168,6 @@ export class FloxyPanel {
           }
         }
 
-        // Обработка join шагов (WaitFor)
         if (step.wait_for || step.WaitFor) {
           const waitForSteps = step.wait_for || step.WaitFor;
           if (Array.isArray(waitForSteps)) {
